@@ -1,4 +1,5 @@
 import mcpApp from "./index";
+import { getArticleDetail } from "./article";
 import {
 	getLatestArticles,
 	getLiveNews,
@@ -51,6 +52,19 @@ async function handleArticles(url: URL) {
 	});
 }
 
+async function handleArticleDetail(url: URL) {
+	const articleId = (url.searchParams.get("id") ?? "").trim() || undefined;
+	const articleUrl = (url.searchParams.get("url") ?? "").trim() || undefined;
+	if (!articleId && !articleUrl) return jsonResponse({ error: "id or url is required" }, 400);
+	return jsonResponse(
+		await getArticleDetail({
+			articleId,
+			articleUrl,
+			maxChars: parsePositiveInt(url.searchParams.get("max_chars"), 2400, 500, 3000),
+		}),
+	);
+}
+
 async function handleSearch(url: URL) {
 	const query = (url.searchParams.get("query") ?? "").trim();
 	if (!query) return jsonResponse({ error: "query is required" }, 400);
@@ -101,6 +115,7 @@ export default {
 					mcp: "/mcp",
 					mcp_tools: [
 						"get_latest_articles",
+						"get_article_detail",
 						"get_live_news",
 						"search_articles",
 						"get_macro_calendar",
@@ -109,6 +124,7 @@ export default {
 						live: "/api/live?channel=要闻&hours=24&important_only=true&max_items=200",
 						by_date: "/api/live?channel=要闻&date=2026-08-20&important_only=true&max_items=300",
 						articles: "/api/articles?limit=20",
+						article_detail: "/api/article-detail?id=3776236&max_chars=2400",
 						search: "/api/search?query=英伟达&limit=20",
 						macro_calendar: "/api/macro-calendar?start_date=2026-08-21&end_date=2026-08-30&min_importance=2&countries=美国,中国",
 					},
@@ -116,6 +132,7 @@ export default {
 			}
 			if (request.method === "GET" && url.pathname === "/api/live") return await handleLive(url);
 			if (request.method === "GET" && url.pathname === "/api/articles") return await handleArticles(url);
+			if (request.method === "GET" && url.pathname === "/api/article-detail") return await handleArticleDetail(url);
 			if (request.method === "GET" && url.pathname === "/api/search") return await handleSearch(url);
 			if (request.method === "GET" && url.pathname === "/api/macro-calendar") return await handleMacroCalendar(url);
 		} catch (error) {

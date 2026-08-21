@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
+import { getArticleDetail } from "./article";
 import {
 	getLatestArticles,
 	getLiveNews,
@@ -29,7 +30,7 @@ function asToolError(error: unknown) {
 function createServer() {
 	const server = new McpServer({
 		name: "WallStreetCN Finance",
-		version: "1.1.0",
+		version: "1.2.0",
 	});
 
 	server.registerTool(
@@ -46,6 +47,32 @@ function createServer() {
 					source: "WallStreetCN / 华尔街见闻",
 					articles: await getLatestArticles(limit),
 				});
+			} catch (error) {
+				return asToolError(error);
+			}
+		},
+	);
+
+	server.registerTool(
+		"get_article_detail",
+		{
+			description:
+				"读取一篇华尔街见闻文章公开页面中无需登录/订阅即可看到的内容，返回标题、元信息、公开摘要/可见片段和原文链接。不绕过会员或付费限制。可直接使用 get_latest_articles/search_articles 返回的文章链接或文章ID。",
+			inputSchema: z.object({
+				article_id: z.string().min(5).max(30).optional().describe("华尔街见闻文章ID，例如 3776236"),
+				article_url: z.string().max(500).optional().describe("华尔街见闻文章链接，例如 https://wallstreetcn.com/articles/3776236"),
+				max_chars: z.number().int().min(500).max(3000).default(2400).describe("最多返回多少字符的公开可见内容，默认2400，最多3000"),
+			}),
+		},
+		async ({ article_id, article_url, max_chars }) => {
+			try {
+				return asToolResult(
+					await getArticleDetail({
+						articleId: article_id,
+						articleUrl: article_url,
+						maxChars: max_chars,
+					}),
+				);
 			} catch (error) {
 				return asToolError(error);
 			}
